@@ -1,0 +1,166 @@
+# Chem Paper Daily configuration.
+# Journals, keywords, genre ratio, notification time, and proxy URL format can
+# all be adjusted here (requirements R2-5). Secrets live in .env, never here.
+
+[general]
+# Contact email sent to Crossref / Unpaywall so requests use the polite pool.
+# Replace with your own address.
+contact_email = "you@example.com"
+# Time the daily job is scheduled to notify (24h, local time). Default 07:00.
+notify_time = "07:00"
+# How many days back each source is queried for new papers.
+lookback_days = 3
+
+[genre]
+# Genre ratio (requirements R2-2). electrochem ~40% / other ~60%.
+# The daily job corrects drift by comparing against the last 10 days of actuals.
+electrochem = 0.4
+other = 0.6
+# Window (days) used when measuring the recent genre balance.
+balance_window_days = 10
+
+[limits]
+# Maximum introductions generated per day (requirements R2-4). The automatic
+# daily pick plus manual "one more" picks count toward this.
+max_intros_per_day = 3
+
+[llm]
+# Generation backend: "claude_code" (default, uses the subscribed Claude plan
+# via `claude -p`, no extra cost) or "api" (metered Anthropic API).
+backend = "claude_code"
+# Model passed to the backend. Sonnet-class by default.
+model = "claude-sonnet-4-5"
+# Timeout in seconds for a single generation call.
+timeout_seconds = 180
+# Max retries after a transient failure (not applied to "not logged in" or
+# "usage limit" failures).
+max_retries = 2
+
+[fulltext]
+# Tohoku University off-campus (proxy) access URL template. {doi} is filled in.
+# Confirm the real proxy host during setup; on-campus the plain DOI link works.
+proxy_url_template = "https://www.library.tohoku.ac.jp/openurl?doi={doi}"
+
+[scoring]
+# Journal rank points: top-tier 3, specialist 2, everything else 1.
+journal_weight_top = 3
+journal_weight_specialist = 2
+journal_weight_other = 1
+# Feedback bonus: a thumbs-up on a paper adds this to papers sharing its
+# journal or a matching keyword; a thumbs-down subtracts it.
+feedback_bonus = 1
+
+# Keyword weights applied when the term appears in the title or abstract.
+[scoring.keywords]
+electrochemical = 2
+electrode = 1
+ionophore = 2
+"ion-selective" = 2
+"pH sensor" = 2
+potentiometric = 2
+voltammetry = 1
+battery = 1
+electrocatalysis = 1
+biosensor = 1
+sensor = 1
+
+# Terms that classify a paper as the electrochem genre (design section 6).
+[genre.electrochem_keywords]
+terms = [
+    "electrochemical",
+    "electrode",
+    "ionophore",
+    "ion-selective",
+    "pH sensor",
+    "potentiometric",
+    "voltammetry",
+    "battery",
+    "electrocatalysis",
+]
+
+# Top-tier general journals (journal_weight_top).
+[[journals]]
+name = "Journal of the American Chemical Society"
+issn = "0002-7863"
+tier = "top"
+
+[[journals]]
+name = "Angewandte Chemie International Edition"
+issn = "1433-7851"
+tier = "top"
+
+[[journals]]
+name = "Nature Chemistry"
+issn = "1755-4330"
+tier = "top"
+
+[[journals]]
+name = "Chemical Science"
+issn = "2041-6520"
+tier = "top"
+
+[[journals]]
+name = "Nature Communications"
+issn = "2041-1723"
+tier = "top"
+
+[[journals]]
+name = "ACS Central Science"
+issn = "2374-7943"
+tier = "top"
+
+# Electrochemistry / analytical specialist journals (journal_weight_specialist).
+[[journals]]
+name = "Analytical Chemistry"
+issn = "0003-2700"
+tier = "specialist"
+
+[[journals]]
+name = "ACS Sensors"
+issn = "2379-3694"
+tier = "specialist"
+
+[[journals]]
+name = "Electrochimica Acta"
+issn = "0013-4686"
+tier = "specialist"
+
+[[journals]]
+name = "Journal of The Electrochemical Society"
+issn = "0013-4651"
+tier = "specialist"
+
+[[journals]]
+name = "ChemElectroChem"
+issn = "2196-0216"
+tier = "specialist"
+
+[[journals]]
+name = "Sensors and Actuators B: Chemical"
+issn = "0925-4005"
+tier = "specialist"
+
+# Breadth journals (treated as specialist tier).
+[[journals]]
+name = "Chemical Reviews"
+issn = "0009-2665"
+tier = "specialist"
+
+[[journals]]
+name = "Nature Catalysis"
+issn = "2520-1158"
+tier = "specialist"
+
+[[journals]]
+name = "ACS Energy Letters"
+issn = "2380-8195"
+tier = "specialist"
+
+[[journals]]
+name = "Chemistry of Materials"
+issn = "0897-4756"
+tier = "specialist"
+
+[pubmed]
+# Search expression for the electrochem sensor / biosensor area (design 5).
+query = "(ion-selective electrode[Title/Abstract]) OR (ionophore[Title/Abstract]) OR (pH sensor[Title/Abstract]) OR (potentiometric[Title/Abstract]) OR (electrochemical sensor[Title/Abstract]) OR (electrochemical biosensor[Title/Abstract])"

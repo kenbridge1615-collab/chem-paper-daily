@@ -1,0 +1,13 @@
+# Local data, PDFs, logs, and the SQLite database are never committed.
+/data/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

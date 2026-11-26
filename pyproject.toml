@@ -1,0 +1,49 @@
+[project]
+name = "chem-paper-daily"
+version = "0.1.0"
+description = "Pick one chemistry paper every morning, have Claude write an English introduction (with Japanese notes and key vocabulary), and deliver it to Slack. A local web app browses past introductions, links to full text, and manages read PDFs."
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.27",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+# Only needed when config.toml sets llm.backend = "api".
+api = ["anthropic>=0.40"]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+
+[project.scripts]
+chem-daily = "app.daily_job:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# Pyflakes + a subset of pycodestyle/isort. Blind-except (BLE001) is not
+# enabled: the collection pipeline deliberately isolates per-source failures
+# (requirements R1-3), so catching Exception there is intended.
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]  # line length handled by the formatter target above
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use small fakes and import-after-path-setup patterns.
+"tests/*" = ["E402"]
