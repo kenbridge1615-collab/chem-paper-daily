@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "_macros.html" import paper_block, intro_block %}
+{% block title %}今日の1本 - Chem Paper Daily{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>今日の1本 <span class="muted small">{{ today }}</span></h1>
+  <form method="post" action="/extra" class="inline"
+        onsubmit="var b=this.querySelector('button'); b.disabled=true; b.textContent='作成中…（数分かかることがあります）';">
+    <button class="btn primary" {{ '' if can_add_extra else 'disabled' }}>➕ もう1本</button>
+    <span class="muted small">今日 {{ used_today }} / {{ max_per_day }} 本</span>
+  </form>
+</div>
+
+{% for item in items %}
+  <article class="card">
+    {{ paper_block(item, "/") }}
+    {% if item.intro.ok %}
+      {{ intro_block(item.intro) }}
+    {% else %}
+      <p class="error">この論文の紹介文の作成に失敗しました。「設定」画面の「直近のジョブ結果」で原因を確認できます。</p>
+    {% endif %}
+  </article>
+{% endfor %}
+
+{% if fallback %}
+  <p class="notice">今日の紹介はまだありません（毎朝 {{ notify_time }} ごろに作られます）。最新の紹介を表示しています。</p>
+  <article class="card">
+    {{ paper_block(fallback, "/") }}
+    {{ intro_block(fallback.intro) }}
+  </article>
+{% elif not items %}
+  <p class="notice">まだ紹介がありません。「もう1本」を押すか、run_daily.bat を一度ダブルクリックしてください。</p>
+{% endif %}
+{% endblock %}

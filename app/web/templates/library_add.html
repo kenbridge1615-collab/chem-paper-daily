@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}論文を本棚に追加 - Chem Paper Daily{% endblock %}
+{% block content %}
+<h1>論文を本棚に追加</h1>
+<p>紹介されていない論文も、DOI を入れると本棚に追加できます。タイトルなどは Crossref から自動で取り込みます。</p>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<form method="post" action="/library/add" enctype="multipart/form-data" class="card stack">
+  <label>DOI（必須）
+    <input type="text" name="doi" value="{{ doi }}" required
+           placeholder="例: 10.1021/jacs.5b00001 または https://doi.org/10.1021/...">
+  </label>
+  <label>タイトル（任意。自動で取り込めなかったときに使います）
+    <input type="text" name="title" value="{{ title }}">
+  </label>
+  <label>PDF（任意。手元に保存した PDF を選びます）
+    <input type="file" name="pdf" accept="application/pdf,.pdf">
+  </label>
+  <button class="btn primary">追加する</button>
+</form>
+{% endblock %}

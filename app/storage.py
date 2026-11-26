@@ -229,3 +229,197 @@ def get_run(conn: sqlite3.Connection, run_date: str) -> sqlite3.Row | None:
     return conn.execute(
         "SELECT * FROM job_runs WHERE run_date = ?", (run_date,)
     ).fetchone()
+
+
+def recent_job_runs(conn: sqlite3.Connection, limit: int = 10) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM job_runs ORDER BY run_date DESC LIMIT ?", (limit,)
+    ).fetchall()
+
+
+# --- Web app queries -------------------------------------------------------
+
+def _like_pattern(text: str) -> str:
+    """Build a LIKE pattern that matches `text` literally (escape % and _)."""
+    escaped = text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
+def find_paper_by_doi(conn: sqlite3.Connection, doi: str) -> Paper | None:
+    row = conn.execute("SELECT * FROM papers WHERE doi = ?", (doi,)).fetchone()
+    return _row_to_paper(row) if row else None
+
+
+def get_introduction(conn: sqlite3.Connection, intro_id: int) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM introductions WHERE id = ?", (intro_id,)
+    ).fetchone()
+
+
+def intros_on(conn: sqlite3.Connection, intro_date: str) -> list[sqlite3.Row]:
+    """All introductions (ok and failed) for one date, oldest first."""
+    return conn.execute(
+        "SELECT * FROM introductions WHERE intro_date = ? ORDER BY id",
+        (intro_date,),
+    ).fetchall()
+
+
+def latest_ok_intro(conn: sqlite3.Connection) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM introductions WHERE status = 'ok' "
+        "ORDER BY intro_date DESC, id DESC LIMIT 1"
+    ).fetchone()
+
+
+def intros_for_paper(conn: sqlite3.Connection, paper_id: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM introductions WHERE paper_id = ? ORDER BY id DESC",
+        (paper_id,),
+    ).fetchall()
+
+
+def get_feedback(conn: sqlite3.Connection, paper_id: int) -> int | None:
+    row = conn.execute(
+        "SELECT rating FROM feedback WHERE paper_id = ?", (paper_id,)
+    ).fetchone()
+    return row["rating"] if row else None
+
+
+def search_introduced_papers(
+    conn: sqlite3.Connection,
+    *,
+    q: str = "",
+    genre: str = "",
+    journal: str = "",
+    limit: int = 200,
+) -> list[sqlite3.Row]:
+    """Introduced papers (with a successful introduction), newest first.
+
+    `q` matches title, abstract, authors, journal, or the introduction text.
+    Each row carries the paper columns plus `intro_id` and `intro_date` of the
+    latest successful introduction.
+    """
+    sql = """
+        SELECT p.*, i.id AS intro_id, i.intro_date AS intro_date
+        FROM papers p
+        JOIN introductions i ON i.id = (
+            SELECT i2.id FROM introductions i2
+            WHERE i2.paper_id = p.id AND i2.status = 'ok'
+            ORDER BY i2.intro_date DESC, i2.id DESC LIMIT 1
+        )
+        WHERE 1 = 1
+    """
+    params: list = []
+    q = q.strip()
+    if q:
+        pat = _like_pattern(q)
+        sql += """ AND (p.title LIKE ? ESCAPE '\\' OR p.abstract LIKE ? ESCAPE '\\'
+                   OR p.authors_json LIKE ? ESCAPE '\\' OR p.journal LIKE ? ESCAPE '\\'
+                   OR i.body_json LIKE ? ESCAPE '\\')"""
+        params += [pat] * 5
+    if genre:
+        sql += " AND p.genre = ?"
+        params.append(genre)
+    if journal:
+        sql += " AND p.journal = ?"
+        params.append(journal)
+    sql += " ORDER BY i.intro_date DESC, i.id DESC LIMIT ?"
+    params.append(limit)
+    return conn.execute(sql, params).fetchall()
+
+
+def introduced_journals(conn: sqlite3.Connection) -> list[str]:
+    """Distinct journal names of introduced papers (for the filter dropdown)."""
+    rows = conn.execute(
+        """SELECT DISTINCT p.journal AS journal FROM papers p
+           JOIN introductions i ON i.paper_id = p.id AND i.status = 'ok'
+           WHERE p.journal IS NOT NULL AND p.journal != ''
+           ORDER BY p.journal"""
+    ).fetchall()
+    return [r["journal"] for r in rows]
+
+
+# --- Library (bookshelf) ----------------------------------------------------
+
+LIBRARY_STATUSES = ("want", "reading", "done")
+
+
+def get_library_entry(conn: sqlite3.Connection, paper_id: int) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM library WHERE paper_id = ?", (paper_id,)
+    ).fetchone()
+
+
+_UNSET = object()
+
+
+def upsert_library(
+    conn: sqlite3.Connection,
+    paper_id: int,
+    *,
+    status=_UNSET,
+    notes=_UNSET,
+    pdf_path=_UNSET,
+) -> None:
+    """Create or partially update a library entry.
+
+    Only the fields that are passed are changed. A new entry defaults to status
+    "want". Raises ValueError for an unknown status.
+    """
+    if status is not _UNSET and status not in LIBRARY_STATUSES:
+        raise ValueError(f"unknown library status: {status!r}")
+    existing = get_library_entry(conn, paper_id)
+    if existing is None:
+        conn.execute(
+            "INSERT INTO library (paper_id, pdf_path, status, notes, updated_at) "
+            "VALUES (?,?,?,?,?)",
+            (
+                paper_id,
+                None if pdf_path is _UNSET else pdf_path,
+                "want" if status is _UNSET else status,
+                "" if notes is _UNSET else notes,
+                _now(),
+            ),
+        )
+    else:
+        fields: dict = {}
+        if status is not _UNSET:
+            fields["status"] = status
+        if notes is not _UNSET:
+            fields["notes"] = notes
+        if pdf_path is not _UNSET:
+            fields["pdf_path"] = pdf_path
+        fields["updated_at"] = _now()
+        cols = ", ".join(f"{k} = ?" for k in fields)
+        conn.execute(
+            f"UPDATE library SET {cols} WHERE paper_id = ?",
+            (*fields.values(), paper_id),
+        )
+    conn.commit()
+
+
+def search_library(
+    conn: sqlite3.Connection, *, q: str = "", status: str = "", limit: int = 500
+) -> list[sqlite3.Row]:
+    """Library entries joined with paper columns; `q` matches title, notes,
+    journal, authors, or DOI. Most recently updated first."""
+    sql = """
+        SELECT p.*, l.pdf_path AS pdf_path, l.status AS lib_status,
+               l.notes AS notes, l.updated_at AS lib_updated_at
+        FROM library l JOIN papers p ON p.id = l.paper_id
+        WHERE 1 = 1
+    """
+    params: list = []
+    q = q.strip()
+    if q:
+        pat = _like_pattern(q)
+        sql += """ AND (p.title LIKE ? ESCAPE '\\' OR l.notes LIKE ? ESCAPE '\\'
+                   OR p.journal LIKE ? ESCAPE '\\' OR p.authors_json LIKE ? ESCAPE '\\'
+                   OR p.doi LIKE ? ESCAPE '\\')"""
+        params += [pat] * 5
+    if status:
+        sql += " AND l.status = ?"
+        params.append(status)
+    sql += " ORDER BY l.updated_at DESC LIMIT ?"
+    params.append(limit)
+    return conn.execute(sql, params).fetchall()

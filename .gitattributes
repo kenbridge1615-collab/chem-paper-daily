@@ -1,0 +1,4 @@
+# Windows scripts are stored with CRLF line endings as-is (no conversion), so a
+# "Download ZIP" from GitHub gives cmd.exe / PowerShell the line endings they expect.
+*.bat -text
+*.ps1 -text

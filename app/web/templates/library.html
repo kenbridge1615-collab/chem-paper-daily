@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}本棚 - Chem Paper Daily{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>📚 本棚</h1>
+  <a class="btn primary" href="/library/add">＋ DOI で論文を追加</a>
+</div>
+
+<form method="get" action="/library" class="filters">
+  <input type="search" name="q" value="{{ q }}" placeholder="タイトル・メモ・雑誌・DOI で検索">
+  <select name="status">
+    <option value="">すべての状態</option>
+    {% for key, label in statuses.items() %}
+      <option value="{{ key }}" {{ 'selected' if status == key else '' }}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn primary">検索</button>
+  {% if q or status %}<a class="btn" href="/library">条件をクリア</a>{% endif %}
+</form>
+
+<p class="muted">{{ items|length }} 件</p>
+<ul class="paper-list">
+  {% for p in items %}
+    <li>
+      <a href="/papers/{{ p.id }}" class="paper-link">{{ p.title }}</a>
+      <div class="meta">
+        <span class="tag status-{{ p.status }}">{{ p.status_label }}</span>
+        {% if p.journal %}<span>{{ p.journal }}</span>{% endif %}
+        {% if p.published_date %}<span>{{ p.published_date }}</span>{% endif %}
+        {% if p.pdf_url %}<a href="{{ p.pdf_url }}" target="_blank">📄 PDF</a>{% else %}<span class="muted">PDF なし</span>{% endif %}
+        <span class="muted">更新 {{ p.updated_at }}</span>
+      </div>
+      {% if p.notes %}<p class="notes">{{ p.notes|truncate(200) }}</p>{% endif %}
+    </li>
+  {% else %}
+    <li class="muted">本棚に論文がありません。紹介ページの「本棚に追加」か、上の「DOI で論文を追加」から登録できます。</li>
+  {% endfor %}
+</ul>
+{% endblock %}

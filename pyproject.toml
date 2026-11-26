@@ -21,6 +21,7 @@ dev = [
 
 [project.scripts]
 chem-daily = "app.daily_job:main"
+chem-web = "app.web.main:main"
 
 [build-system]
 requires = ["hatchling"]

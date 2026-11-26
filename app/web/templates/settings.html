@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}設定 - Chem Paper Daily{% endblock %}
+{% block content %}
+<h1>設定と利用状況</h1>
+<p class="muted">設定を変えるには、アプリのフォルダにある config.toml（秘密の値は .env）をメモ帳で編集し、アプリを起動し直してください。</p>
+
+<section class="card">
+  <h2>今月の使用量（{{ month }}）</h2>
+  <table class="kv">
+    <tr><th>入力トークン</th><td>{{ "{:,}".format(usage.input_tokens) }}</td></tr>
+    <tr><th>出力トークン</th><td>{{ "{:,}".format(usage.output_tokens) }}</td></tr>
+  </table>
+</section>
+
+<section class="card">
+  <h2>基本設定</h2>
+  <table class="kv">
+    {% for label, value in general %}<tr><th>{{ label }}</th><td>{{ value }}</td></tr>{% endfor %}
+  </table>
+  <h3>秘密の設定（.env）</h3>
+  <p class="muted small">安全のため、値そのものは表示しません。</p>
+  <table class="kv">
+    {% for label, state in secrets %}<tr><th>{{ label }}</th><td>{{ state }}</td></tr>{% endfor %}
+  </table>
+</section>
+
+<section class="card">
+  <h2>直近のジョブ結果</h2>
+  <table class="list">
+    <thead><tr><th>日付</th><th>結果</th><th>開始</th><th>終了</th><th>記録</th></tr></thead>
+    <tbody>
+    {% for r in runs %}
+      <tr>
+        <td>{{ r.run_date }}</td><td>{{ r.result }}</td>
+        <td>{{ r.started_at }}</td><td>{{ r.finished_at }}</td>
+        <td>{% if r.log %}<details><summary>表示</summary><pre>{{ r.log }}</pre></details>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">まだジョブは実行されていません。</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>対象の雑誌</h2>
+  <table class="list">
+    <thead><tr><th>雑誌</th><th>ISSN</th><th>格付け</th></tr></thead>
+    <tbody>
+    {% for j in journals %}<tr><td>{{ j.name }}</td><td>{{ j.issn }}</td><td>{{ j.tier }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  <h3>キーワードと重み</h3>
+  <p>{% for k, w in keywords %}<span class="tag">{{ k }} ×{{ w }}</span> {% endfor %}</p>
+</section>
+{% endblock %}

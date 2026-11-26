@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Chem Paper Daily{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">🧪 Chem Paper Daily</a>
+    <nav>
+      <a href="/" class="{{ 'active' if nav == '/' else '' }}">今日の1本</a>
+      <a href="/papers" class="{{ 'active' if nav.startswith('/papers') else '' }}">これまでの紹介</a>
+      <a href="/library" class="{{ 'active' if nav.startswith('/library') else '' }}">本棚</a>
+      <a href="/settings" class="{{ 'active' if nav == '/settings' else '' }}">設定</a>
+    </nav>
+  </header>
+  <main>
+    {% if flash %}<p class="flash">{{ flash }}</p>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">このアプリはあなたの PC の中だけで動いています（127.0.0.1）。</footer>
+</body>
+</html>

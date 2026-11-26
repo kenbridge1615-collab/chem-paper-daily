@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "_macros.html" import paper_block, intro_block %}
+{% block title %}{{ paper.title }} - Chem Paper Daily{% endblock %}
+{% block content %}
+{% set here = "/papers/" ~ paper.id %}
+<article class="card">
+  {{ paper_block({"paper": paper, "links": links, "feedback": feedback, "library": library}, here) }}
+  {% if paper.doi %}<p class="muted small">DOI: {{ paper.doi }} ・ 情報源: {{ paper.source_label }}</p>{% endif %}
+
+  {% if intro %}
+    {{ intro_block(intro) }}
+  {% else %}
+    <p class="notice">この論文にはまだ紹介文がありません。</p>
+  {% endif %}
+
+  {% if paper.abstract %}
+  <details class="abstract">
+    <summary>元の要旨（Abstract）を見る</summary>
+    <p lang="en">{{ paper.abstract }}</p>
+  </details>
+  {% endif %}
+</article>
+
+<section class="card" id="library">
+  <h2>📚 本棚</h2>
+  {% if library %}
+    <form method="post" action="/library/{{ paper.id }}" class="stack">
+      <input type="hidden" name="next" value="{{ here }}#library">
+      <label>読書状態
+        <select name="status">
+          {% for key, label in statuses.items() %}
+            <option value="{{ key }}" {{ 'selected' if library.status == key else '' }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>メモ
+        <textarea name="notes" rows="6" placeholder="気づいたこと、疑問、次に調べたいこと など">{{ library.notes }}</textarea>
+      </label>
+      <button class="btn primary">保存</button>
+      {% if library.updated_at %}<span class="muted small">最終更新 {{ library.updated_at }}</span>{% endif %}
+    </form>
+
+    <h3>PDF</h3>
+    {% if library.pdf_url %}
+      <p><a class="btn" href="{{ library.pdf_url }}" target="_blank">PDF を開く</a>
+         <span class="muted small">（もう一度登録すると差し替えます）</span></p>
+    {% endif %}
+    <form method="post" action="/library/{{ paper.id }}/pdf" enctype="multipart/form-data" class="inline">
+      <input type="hidden" name="next" value="{{ here }}#library">
+      <input type="file" name="pdf" accept="application/pdf,.pdf" required>
+      <button class="btn">PDF を登録</button>
+    </form>
+  {% else %}
+    <p>まだ本棚に入っていません。</p>
+    <form method="post" action="/papers/{{ paper.id }}/library" class="inline">
+      <input type="hidden" name="next" value="{{ here }}#library">
+      <button class="btn primary">本棚に追加</button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}これまでの紹介 - Chem Paper Daily{% endblock %}
+{% block content %}
+<h1>これまでの紹介</h1>
+
+<form method="get" action="/papers" class="filters">
+  <input type="search" name="q" value="{{ q }}" placeholder="キーワード（タイトル・要旨・紹介文・著者）">
+  <select name="genre">
+    <option value="">すべてのジャンル</option>
+    {% for key, label in genres.items() %}
+      <option value="{{ key }}" {{ 'selected' if genre == key else '' }}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="journal">
+    <option value="">すべての雑誌</option>
+    {% for j in journals %}
+      <option value="{{ j }}" {{ 'selected' if journal == j else '' }}>{{ j }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn primary">検索</button>
+  {% if q or genre or journal %}<a class="btn" href="/papers">条件をクリア</a>{% endif %}
+</form>
+
+<p class="muted">{{ items|length }} 件</p>
+<ul class="paper-list">
+  {% for p in items %}
+    <li>
+      <a href="/papers/{{ p.id }}" class="paper-link">{{ p.title }}</a>
+      <div class="meta">
+        <span>紹介日 {{ p.intro_date }}</span>
+        {% if p.journal %}<span>{{ p.journal }}</span>{% endif %}
+        {% if p.genre_label %}<span class="tag">{{ p.genre_label }}</span>{% endif %}
+        {% if p.is_preprint %}<span class="tag warn">プレプリント</span>{% endif %}
+      </div>
+      {% if p.authors_text %}<div class="authors">{{ p.authors_text }}</div>{% endif %}
+    </li>
+  {% else %}
+    <li class="muted">該当する紹介はありません。</li>
+  {% endfor %}
+</ul>
+{% endblock %}

@@ -102,3 +102,25 @@ def fetch_journal(
     data = resp.json()
     items = data.get("message", {}).get("items", [])
     return [_item_to_paper(it, issn, journal_name) for it in items]
+
+
+def fetch_work(fetch: Fetcher, doi: str, *, contact_email: str) -> Paper | None:
+    """Fetch metadata for a single DOI (used by the web app's manual add).
+
+    Returns None if Crossref does not know the DOI (404). The paper's source is
+    set to "manual" because the user added it by hand.
+    """
+    from urllib.parse import quote
+
+    resp = fetch(f"{API_BASE}/works/{quote(doi, safe='/')}", params={"mailto": contact_email})
+    if resp.status_code == 404:
+        return None
+    if not resp.ok:
+        raise RuntimeError(f"Crossref returned status {resp.status_code} for DOI {doi}")
+    item = resp.json().get("message", {})
+    issns = item.get("ISSN") or []
+    paper = _item_to_paper(item, issns[0] if issns else None, None)
+    paper.source = "manual"
+    if not paper.doi:
+        paper.doi = doi
+    return paper

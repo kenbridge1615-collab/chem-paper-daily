@@ -1,0 +1,93 @@
+{# Reusable page pieces. Macros take explicit arguments so they work the same
+   inside loops on every page. #}
+
+{% macro paper_block(item, next_url) %}
+{% set paper = item.paper %}
+<div class="paper-head">
+  <h2 class="paper-title"><a href="/papers/{{ paper.id }}">{{ paper.title }}</a></h2>
+  <p class="meta">
+    {% if paper.journal %}<span>{{ paper.journal }}</span>{% endif %}
+    {% if paper.published_date %}<span>{{ paper.published_date }}</span>{% endif %}
+    {% if paper.genre_label %}<span class="tag">{{ paper.genre_label }}</span>{% endif %}
+    {% if paper.is_preprint %}<span class="tag warn">プレプリント（査読前）</span>{% endif %}
+  </p>
+  {% if paper.authors_text %}<p class="authors">{{ paper.authors_text }}</p>{% endif %}
+</div>
+
+<div class="fulltext">
+  <strong>全文を読む:</strong>
+  {% for link in item.links %}
+    <a class="btn" href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.label }}</a>
+  {% else %}
+    <span class="muted">リンクがありません</span>
+  {% endfor %}
+</div>
+
+<div class="actions-row">
+  <form method="post" action="/papers/{{ paper.id }}/feedback" class="inline">
+    <input type="hidden" name="next" value="{{ next_url }}">
+    <button name="rating" value="1" class="btn {{ 'selected' if item.feedback == 1 else '' }}" title="面白かった">👍</button>
+    <button name="rating" value="-1" class="btn {{ 'selected' if item.feedback == -1 else '' }}" title="いまいち">👎</button>
+  </form>
+  {% if item.library %}
+    <a class="btn" href="/papers/{{ paper.id }}#library">📚 本棚: {{ item.library.status_label }}</a>
+    {% if item.library.pdf_url %}<a class="btn" href="{{ item.library.pdf_url }}" target="_blank">PDF を開く</a>{% endif %}
+  {% else %}
+    <form method="post" action="/papers/{{ paper.id }}/library" class="inline">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <button class="btn">📚 本棚に追加</button>
+    </form>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{% macro intro_block(intro) %}
+<p class="basis-label">ℹ️ 要旨ベースの紹介（論文の要旨だけをもとに書いています。詳しい内容は全文で確認してください）</p>
+
+{% for s in intro.sections %}
+<section class="intro-section" lang="en">
+  <h3>{{ s.heading }}</h3>
+  <p>{{ s.text }}</p>
+</section>
+{% endfor %}
+
+{% if intro.summary_ja %}
+<section class="intro-section">
+  <h3>日本語の要点</h3>
+  <ul>
+    {% for line in intro.summary_ja %}<li>{{ line }}</li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if intro.vocabulary %}
+<section class="intro-section">
+  <h3>重要単語</h3>
+  <table class="vocab">
+    <thead><tr><th>単語</th><th>意味</th><th>メモ</th><th>用例</th></tr></thead>
+    <tbody>
+    {% for v in intro.vocabulary %}
+      <tr>
+        <td lang="en"><strong>{{ v.word }}</strong></td>
+        <td>{{ v.ja }}</td>
+        <td>{{ v.note }}</td>
+        <td lang="en" class="example">{{ v.example }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if intro.question %}
+<section class="intro-section question">
+  <h3>考えてみよう</h3>
+  <p lang="en">{{ intro.question }}</p>
+</section>
+{% endif %}
+
+<p class="muted small">
+  {{ intro.intro_date }} ・ {{ intro.kind_label }} ・ 生成: {{ intro.backend_label }}{% if intro.model %}（{{ intro.model }}）{% endif %}
+</p>
+{% endmacro %}
